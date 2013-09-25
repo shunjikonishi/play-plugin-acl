@@ -1,0 +1,4 @@
+self: play -> acl 0.1
+
+require:
+    - play
