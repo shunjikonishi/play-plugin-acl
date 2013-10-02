@@ -31,8 +31,8 @@ You can set multiple values separating by comma.
 ## Basic authentication setting
 You should set follwing keys in your application.conf.
 
-- flect.acl.basicAuth.username
-- flect.acl.basicAuth.password
+    flect.acl.basicAuth.username=skonishi
+    flect.acl.basicAuth.password=mypassword
 
 ## Hack
 You can use these features directly in your Controller class.
