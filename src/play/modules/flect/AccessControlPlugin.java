@@ -18,6 +18,7 @@ public class AccessControlPlugin extends PlayPlugin {
 	
 	private IPFilter filter;
 	private List<Matcher> excludes;
+	private List<Matcher> baExcludes;
 	private AuthManager auth;
 	
 	public boolean isAllowUnknown() { 
@@ -31,7 +32,7 @@ public class AccessControlPlugin extends PlayPlugin {
 	
 	@Override
 	public void onApplicationStart() {
-		//許可IPの設定
+		//Settings for IP filterling
 		String allow = Play.configuration.getProperty("flect.acl.ipfilter.allow");
 		if (allow != null && !"all".equalsIgnoreCase(allow)) {
 			this.filter = new IPFilter();
@@ -40,25 +41,35 @@ public class AccessControlPlugin extends PlayPlugin {
 				this.filter.addAllowAddress(strs[i]);
 			}
 		}
-		//除外パスの設定
+		//Exclude path for IP filtering
 		String excludes = Play.configuration.getProperty("flect.acl.ipfilter.excludes");
 		if (this.filter != null && excludes != null && !"none".equals(excludes)) {
 			this.excludes = new ArrayList<Matcher>();
-			String[] strs = excludes.split(",");
-			for (String s : strs) {
-				try {
-					this.excludes.add(new RegexMatcher(s));
-				} catch (PatternSyntaxException e) {
-					Logger.error("Cannot parse flect.acl.ipfilter.excludes: " + e.toString());
-				}
-			}
+			buildExcludes(this.excludes, excludes);
 		}
 		
-		//Basic認証の設定
+		//Setting for Basic Authentication
 		String basicUser = Play.configuration.getProperty("flect.acl.basicAuth.username");
 		String basicPass = Play.configuration.getProperty("flect.acl.basicAuth.password");
 		if (basicUser != null && basicPass != null) {
 			this.auth = new AuthManager(new DefaultAuthProvider("", basicUser, basicPass));
+		}
+		//Exclude path for Basic Authentication
+		String baExcludes = Play.configuration.getProperty("flect.acl.basicAuth.excludes");
+		if (this.auth != null && baExcludes != null && !"none".equals(baExcludes)) {
+			this.baExcludes = new ArrayList<Matcher>();
+			buildExcludes(this.baExcludes, baExcludes);
+		}
+	}
+	
+	private void buildExcludes(List<Matcher> list, String str) {
+		String[] strs = str.split(",");
+		for (String s : strs) {
+			try {
+				list.add(new RegexMatcher(s));
+			} catch (PatternSyntaxException e) {
+				Logger.error("Cannot parse flect.acl.ipfilter.excludes: " + e.toString());
+			}
 		}
 	}
 	
@@ -91,7 +102,17 @@ public class AccessControlPlugin extends PlayPlugin {
 	}
 	
 	private boolean checkAuth(Request request, Response response) {
-		if (this.auth == null || this.auth.authenticate(request)) {
+		if (this.auth == null) {
+			return false;
+		}
+		if (this.baExcludes != null) {
+			for (Matcher m : this.baExcludes) {
+				if (m.match(request.path)) {
+					return false;
+				}
+			}
+		}
+		if (this.auth.authenticate(request)) {
 			return false;
 		}
 		response.status = 401;
