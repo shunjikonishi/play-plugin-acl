@@ -21,6 +21,14 @@ public class AccessControlPlugin extends PlayPlugin {
 	private List<Matcher> baExcludes;
 	private AuthManager auth;
 	
+	private static String getConfig(String key) {
+		String ret = Play.configuration.getProperty(key);
+		if (ret != null && ret.startsWith("${") && ret.endsWith("}")) {
+			ret = null;
+		}
+		return ret;
+	}
+	
 	public boolean isAllowUnknown() { 
 		return this.filter != null && this.filter.isAllowUnknown();
 	}
@@ -33,7 +41,7 @@ public class AccessControlPlugin extends PlayPlugin {
 	@Override
 	public void onApplicationStart() {
 		//Settings for IP filterling
-		String allow = Play.configuration.getProperty("flect.acl.ipfilter.allow");
+		String allow = getConfig("flect.acl.ipfilter.allow");
 		if (allow != null && !"all".equalsIgnoreCase(allow)) {
 			this.filter = new IPFilter();
 			String[] strs = allow.split(",");
@@ -42,20 +50,20 @@ public class AccessControlPlugin extends PlayPlugin {
 			}
 		}
 		//Exclude path for IP filtering
-		String excludes = Play.configuration.getProperty("flect.acl.ipfilter.excludes");
+		String excludes = getConfig("flect.acl.ipfilter.excludes");
 		if (this.filter != null && excludes != null && !"none".equals(excludes)) {
 			this.excludes = new ArrayList<Matcher>();
 			buildExcludes(this.excludes, excludes);
 		}
 		
 		//Setting for Basic Authentication
-		String basicUser = Play.configuration.getProperty("flect.acl.basicAuth.username");
-		String basicPass = Play.configuration.getProperty("flect.acl.basicAuth.password");
+		String basicUser = getConfig("flect.acl.basicAuth.username");
+		String basicPass = getConfig("flect.acl.basicAuth.password");
 		if (basicUser != null && basicPass != null) {
 			this.auth = new AuthManager(new DefaultAuthProvider("", basicUser, basicPass));
 		}
 		//Exclude path for Basic Authentication
-		String baExcludes = Play.configuration.getProperty("flect.acl.basicAuth.excludes");
+		String baExcludes = getConfig("flect.acl.basicAuth.excludes");
 		if (this.auth != null && baExcludes != null && !"none".equals(baExcludes)) {
 			this.baExcludes = new ArrayList<Matcher>();
 			buildExcludes(this.baExcludes, baExcludes);
